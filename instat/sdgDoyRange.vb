@@ -54,8 +54,6 @@ Public Class sdgDoyRange
             bUpdate = True
         End If
         clsDoyFilterCalc = clsNewDoyFilterCalc
-        clsDayFromOperator = clsNewDayFromOperator
-        clsDayToOperator = clsNewDayToOperator
         clsCalcFromList = clsNewCalcFromList
         strMainDataFrame = strNewMainDataFrame
         strDoyColumn = strNewDoyColumn
@@ -91,7 +89,9 @@ Public Class sdgDoyRange
             ucrDoyTo.SetStartDay(1)
         End If
 
+        clsDayFromOperator = clsNewDayFromOperator
         clsFromParam = clsDayFromOperator.GetParameter("from")
+        bUpdate = False
         If clsFromParam IsNot Nothing Then
             If clsFromParam.bIsString AndAlso clsFromParam.strArgumentValue IsNot Nothing Then
                 If Integer.TryParse(clsFromParam.strArgumentValue, iFrom) Then
@@ -112,6 +112,8 @@ Public Class sdgDoyRange
             End If
         End If
 
+        bUpdate = True
+        clsDayToOperator = clsNewDayToOperator
         clsToParam = clsDayToOperator.GetParameter("to")
         If clsToParam IsNot Nothing Then
             If clsToParam.bIsString AndAlso clsToParam.strArgumentValue IsNot Nothing Then
@@ -128,7 +130,7 @@ Public Class sdgDoyRange
                         End If
                     End If
                     rdoToVariable.Checked = True
-                    ucrReceiverTo.Add(clsFromParam.strArgumentValue, strDataFrameName, False)
+                    ucrReceiverTo.Add(clsToParam.strArgumentValue, strDataFrameName, False)
                 End If
             ElseIf clsToParam.bIsOperator AndAlso clsToParam.clsArgumentCodeStructure IsNot Nothing Then
                 clsFixedDiffOp = TryCast(clsToParam.clsArgumentCodeStructure, ROperator)
@@ -162,7 +164,13 @@ Public Class sdgDoyRange
         ucrPnlTo.AddToLinkedControls(ucrNudToDiff, {rdoLength}, bNewLinkedHideIfParameterMissing:=True)
 
         ucrReceiverFrom.Selector = ucrSelectorDoy
+        'Strict because we only want numeric/integer, not Dates etc.
+        ucrReceiverFrom.SetIncludedDataTypes({"numeric"}, bStrict:=True)
+        ucrReceiverFrom.strSelectorHeading = "Numerics"
+
         ucrReceiverTo.Selector = ucrSelectorDoy
+        ucrReceiverTo.SetIncludedDataTypes({"numeric"}, bStrict:=True)
+        ucrReceiverTo.strSelectorHeading = "Numerics"
 
         ucrDoyFrom.SetParameterIsNumber()
         ucrDoyTo.SetParameterIsNumber()
@@ -249,5 +257,6 @@ Public Class sdgDoyRange
 
     Private Sub FromControls_ControlValueChanged(ucrChangedControl As ucrCore) Handles ucrDoyFrom.ControlValueChanged, ucrReceiverFrom.ControlValueChanged
         UpdateFromValues()
+        UpdateToValues()
     End Sub
 End Class

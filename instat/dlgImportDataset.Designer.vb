@@ -62,6 +62,11 @@ Partial Class dlgImportDataset
         Me.ucrInputSeparatorCSV = New instat.ucrInputComboBox()
         Me.ucrInputEncodingCSV = New instat.ucrInputComboBox()
         Me.grpExcel = New System.Windows.Forms.GroupBox()
+        Me.lblTo = New System.Windows.Forms.Label()
+        Me.lblFrom = New System.Windows.Forms.Label()
+        Me.ucrInputTextTo = New instat.ucrInputTextBox()
+        Me.ucrChkRange = New instat.ucrCheck()
+        Me.ucrInputTextFrom = New instat.ucrInputTextBox()
         Me.ucrNudMaxRowsExcel = New instat.ucrNud()
         Me.ucrChkColumnNamesExcel = New instat.ucrCheck()
         Me.ucrChkMaxRowsExcel = New instat.ucrCheck()
@@ -97,13 +102,13 @@ Partial Class dlgImportDataset
         Me.rdoFixedWidthWhiteSpacesText = New System.Windows.Forms.RadioButton()
         Me.clbSheets = New System.Windows.Forms.CheckedListBox()
         Me.lblSelectSheets = New System.Windows.Forms.Label()
+        Me.lblImportingSheets = New System.Windows.Forms.Label()
+        Me.ucrChkSheetsCheckAll = New instat.ucrCheck()
         Me.ucrNudPreviewLines = New instat.ucrNud()
         Me.ucrPanelFixedWidthText = New instat.UcrPanel()
         Me.ucrSaveFile = New instat.ucrSave()
         Me.ucrInputFilePath = New instat.ucrInputTextBox()
         Me.ucrBase = New instat.ucrButtons()
-        Me.ucrChkSheetsCheckAll = New instat.ucrCheck()
-        Me.lblImportingSheets = New System.Windows.Forms.Label()
         Me.grpCSV.SuspendLayout()
         Me.grpExcel.SuspendLayout()
         Me.grpRDS.SuspendLayout()
@@ -280,6 +285,11 @@ Partial Class dlgImportDataset
         '
         'grpExcel
         '
+        Me.grpExcel.Controls.Add(Me.lblTo)
+        Me.grpExcel.Controls.Add(Me.ucrChkRange)
+        Me.grpExcel.Controls.Add(Me.lblFrom)
+        Me.grpExcel.Controls.Add(Me.ucrInputTextTo)
+        Me.grpExcel.Controls.Add(Me.ucrInputTextFrom)
         Me.grpExcel.Controls.Add(Me.ucrNudMaxRowsExcel)
         Me.grpExcel.Controls.Add(Me.ucrChkColumnNamesExcel)
         Me.grpExcel.Controls.Add(Me.ucrChkMaxRowsExcel)
@@ -293,6 +303,38 @@ Partial Class dlgImportDataset
         resources.ApplyResources(Me.grpExcel, "grpExcel")
         Me.grpExcel.Name = "grpExcel"
         Me.grpExcel.TabStop = False
+        '
+        'lblTo
+        '
+        resources.ApplyResources(Me.lblTo, "lblTo")
+        Me.lblTo.Name = "lblTo"
+        '
+        'lblFrom
+        '
+        resources.ApplyResources(Me.lblFrom, "lblFrom")
+        Me.lblFrom.Name = "lblFrom"
+        '
+        'ucrInputTextTo
+        '
+        Me.ucrInputTextTo.AddQuotesIfUnrecognised = True
+        Me.ucrInputTextTo.IsMultiline = False
+        Me.ucrInputTextTo.IsReadOnly = False
+        resources.ApplyResources(Me.ucrInputTextTo, "ucrInputTextTo")
+        Me.ucrInputTextTo.Name = "ucrInputTextTo"
+        '
+        'ucrChkRange
+        '
+        Me.ucrChkRange.Checked = False
+        resources.ApplyResources(Me.ucrChkRange, "ucrChkRange")
+        Me.ucrChkRange.Name = "ucrChkRange"
+        '
+        'ucrInputTextFrom
+        '
+        Me.ucrInputTextFrom.AddQuotesIfUnrecognised = True
+        Me.ucrInputTextFrom.IsMultiline = False
+        Me.ucrInputTextFrom.IsReadOnly = False
+        resources.ApplyResources(Me.ucrInputTextFrom, "ucrInputTextFrom")
+        Me.ucrInputTextFrom.Name = "ucrInputTextFrom"
         '
         'ucrNudMaxRowsExcel
         '
@@ -544,6 +586,17 @@ Partial Class dlgImportDataset
         Me.lblSelectSheets.Name = "lblSelectSheets"
         Me.lblSelectSheets.Tag = ""
         '
+        'lblImportingSheets
+        '
+        resources.ApplyResources(Me.lblImportingSheets, "lblImportingSheets")
+        Me.lblImportingSheets.Name = "lblImportingSheets"
+        '
+        'ucrChkSheetsCheckAll
+        '
+        Me.ucrChkSheetsCheckAll.Checked = False
+        resources.ApplyResources(Me.ucrChkSheetsCheckAll, "ucrChkSheetsCheckAll")
+        Me.ucrChkSheetsCheckAll.Name = "ucrChkSheetsCheckAll"
+        '
         'ucrNudPreviewLines
         '
         Me.ucrNudPreviewLines.DecimalPlaces = New Decimal(New Integer() {0, 0, 0, 0})
@@ -576,17 +629,6 @@ Partial Class dlgImportDataset
         '
         resources.ApplyResources(Me.ucrBase, "ucrBase")
         Me.ucrBase.Name = "ucrBase"
-        '
-        'ucrChkSheetsCheckAll
-        '
-        Me.ucrChkSheetsCheckAll.Checked = False
-        resources.ApplyResources(Me.ucrChkSheetsCheckAll, "ucrChkSheetsCheckAll")
-        Me.ucrChkSheetsCheckAll.Name = "ucrChkSheetsCheckAll"
-        '
-        'lblImportingSheets
-        '
-        resources.ApplyResources(Me.lblImportingSheets, "lblImportingSheets")
-        Me.lblImportingSheets.Name = "lblImportingSheets"
         '
         'dlgImportDataset
         '
@@ -700,4 +742,9 @@ Partial Class dlgImportDataset
     Friend WithEvents lblSelectSheets As Label
     Friend WithEvents ucrChkSheetsCheckAll As ucrCheck
     Friend WithEvents lblImportingSheets As Label
+    Friend WithEvents ucrChkRange As ucrCheck
+    Friend WithEvents lblTo As Label
+    Friend WithEvents lblFrom As Label
+    Friend WithEvents ucrInputTextTo As ucrInputTextBox
+    Friend WithEvents ucrInputTextFrom As ucrInputTextBox
 End Class

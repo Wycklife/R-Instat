@@ -3,9 +3,10 @@ get_default_significant_figures <- function(data) {
   else return(NA)  
 }
 
-convert_to_character_matrix <- function(data, format_decimal_places = TRUE, decimal_places, return_data_frame = TRUE, na_display = NULL, check.names = TRUE) {
+convert_to_character_matrix <- function(data, format_decimal_places = TRUE, decimal_places, is_scientific = FALSE, return_data_frame = TRUE, na_display = NULL, check.names = TRUE) {
   if(nrow(data) == 0) {
-    out <- data
+    out <- matrix(nrow = 0, ncol = ncol(data))
+    colnames(out) <- colnames(data)
   }
   else {
     out = matrix(nrow = nrow(data), ncol = ncol(data))
@@ -17,7 +18,7 @@ convert_to_character_matrix <- function(data, format_decimal_places = TRUE, deci
         out[,i] <- as.character(data[[i]])
       }
       else {
-        out[,i] <- format(data[[i]], digits = decimal_places[i], scientific = FALSE)
+        out[,i] <- format(data[[i]], digits = decimal_places[i], scientific = is_scientific[i])
       }
       if(!is.null(na_display)) {
         out[is.na(data[[i]]),i] <- na_display
@@ -272,10 +273,17 @@ nc_get_dim_min_max <- function(nc, dimension, time_as_date = TRUE) {
   if(dimension %in% time_dims && time_as_date) {
     time_vals <- c()
     try({
-      pcict_time <- ncdf4.helpers::nc.get.time.series(nc, time.dim.name = dimension)
-      posixct_time <- PCICt::as.POSIXct.PCICt(pcict_time)
-      # RDotNet interprets Date class as numeric so character needed to preserve date
-      time_vals <- as.character(as.Date(posixct_time))
+      units <- ncdf4::ncatt_get(nc, dimension, "units")
+      if(units$hasatt && units$value == "julian_day") {
+        # RDotNet interprets Date class as numeric so character needed to preserve date
+        time_vals <- as.character(as.Date(vals, origin = structure(-2440588, class = "Date")))
+      }
+      else {
+        pcict_time <- ncdf4.helpers::nc.get.time.series(nc, time.dim.name = dimension)
+        posixct_time <- PCICt::as.POSIXct.PCICt(pcict_time)
+        # RDotNet interprets Date class as numeric so character needed to preserve date
+        time_vals <- as.character(as.Date(posixct_time))
+      }
     })
     if(length(time_vals) > 0 && !anyNA(time_vals)) vals <- time_vals
   }
@@ -284,6 +292,7 @@ nc_get_dim_min_max <- function(nc, dimension, time_as_date = TRUE) {
 }
 
 nc_as_data_frame <- function(nc, vars, keep_raw_time = TRUE, include_metadata = TRUE, boundary = NULL, lon_points = NULL, lat_points = NULL, id_points = NULL, show_requested_points = TRUE, great_circle_dist = TRUE) {
+  if(missing(vars)) vars <- ncdf4.helpers::nc.get.variable.list(nc)
   if(sum(is.null(lon_points), is.null(lat_points)) == 1) stop("You must specificy both lon_points and lat_points")
   has_points <- (sum(is.null(lon_points), is.null(lat_points)) == 0)
   if(has_points && length(lon_points) != length(lat_points)) stop("lon_points and lat_points have unequal lengths.")
@@ -317,9 +326,17 @@ nc_as_data_frame <- function(nc, vars, keep_raw_time = TRUE, include_metadata = 
             if(dim == "T") {
               ind <- integer(0)
               try({
-                pcict_time <- ncdf4.helpers::nc.get.time.series(nc, time.dim.name = dim_var)
-                posixct_time <- PCICt::as.POSIXct.PCICt(pcict_time)
-                time_vals <- as.Date(posixct_time)
+                print(dim_var)
+                units <- ncdf4::ncatt_get(nc, dim_var, "units")
+                if(units$hasatt && units$value == "julian_day") {
+                  # RDotNet interprets Date class as numeric so character needed to preserve date
+                  time_vals <- as.Date(curr_dim_values, origin = structure(-2440588, class = "Date"))
+                }
+                else {
+                  pcict_time <- ncdf4.helpers::nc.get.time.series(nc, time.dim.name = dim_var)
+                  posixct_time <- PCICt::as.POSIXct.PCICt(pcict_time)
+                  time_vals <- as.Date(posixct_time)
+                }
                 ind <- which(time_vals >= boundary[[dim_var]][[1]] & time_vals <= boundary[[dim_var]][[2]])
               })
             }
@@ -425,11 +442,17 @@ nc_as_data_frame <- function(nc, vars, keep_raw_time = TRUE, include_metadata = 
       try({
         # need to subset this if time var has been subsetted
         time_ind <- which(raw_time_full %in% raw_time)
-        pcict_time <- ncdf4.helpers::nc.get.time.series(nc, time.dim.name = time_var)
-        pcict_time <- pcict_time[time_ind]
-        posixct_time <- PCICt::as.POSIXct.PCICt(pcict_time)
-        time_df[[paste0(time_var, "_full")]] <- posixct_time
-        time_df[[paste0(time_var, "_date")]] <- as.Date(posixct_time)
+        units <- ncdf4::ncatt_get(nc, time_var, "units")
+        if(units$hasatt && units$value == "julian_day") {
+          time_df[[paste0(time_var, "_date")]] <- as.Date(raw_time, origin = structure(-2440588, class = "Date"))
+        }
+        else {
+          pcict_time <- ncdf4.helpers::nc.get.time.series(nc, time.dim.name = time_var)
+          pcict_time <- pcict_time[time_ind]
+          posixct_time <- PCICt::as.POSIXct.PCICt(pcict_time)
+          time_df[[paste0(time_var, "_full")]] <- posixct_time
+          time_df[[paste0(time_var, "_date")]] <- as.Date(posixct_time)
+        }
       })
       if(ncol(time_df) > 1) curr_var_data <- dplyr::full_join(curr_var_data, time_df, by = time_var)
       if(!keep_raw_time) {
@@ -582,6 +605,26 @@ nc_as_data_frame <- function(nc, vars, keep_raw_time = TRUE, include_metadata = 
 #   return(list(my_data, lat_lon_df, new_lat_lon_column_names))
 # }
 
+multiple_nc_as_data_frame <- function(path, vars, keep_raw_time = TRUE, include_metadata = TRUE, boundary = NULL, lon_points = NULL, lat_points = NULL, id_points = NULL, show_requested_points = TRUE, great_circle_dist = TRUE, id = "id") {
+  filepaths <- list.files(path = path, pattern="*\\.nc", full.names = TRUE)
+  filenames <- basename(filepaths)
+  nc_list <- list()
+  
+  n_files <- length(filepaths)
+  pb <- winProgressBar(title = "Reading files", min = 0, max = n_files)
+  for(i in seq_along(filepaths)) {
+    nc <- ncdf4::nc_open(filename = filepaths[i])
+    dat <- nc_as_data_frame(nc = nc, vars = vars, keep_raw_time = keep_raw_time, include_metadata = include_metadata, boundary = boundary, lon_points = lon_points, lat_points = lat_points, id_points = id_points, show_requested_points = show_requested_points, great_circle_dist = great_circle_dist)
+    nc_list[[length(nc_list) + 1]] <- dat
+    ncdf4::nc_close(nc)
+    info <- paste0("Reading file ", i, " of ", n_files, " - ", round(100*i/n_files), "%")
+    setWinProgressBar(pb, value = i, title = info, label = info)
+  }
+  close(pb)
+  names(nc_list) <- tools::file_path_sans_ext(filenames)
+  merged_data <- dplyr::bind_rows(nc_list, .id = id)
+  return(merged_data)
+}
 
 import_from_iri <- function(download_from, data_file, path, X1, X2,Y1,Y2, get_area_point){
   if(path == ""){
@@ -1071,10 +1114,10 @@ duplicated_count_index<-function(x, type = "count"){
 }
 
 
-get_installed_packages_with_data <- function() {
-  pack_data <- data(package = .packages(all.available = TRUE))
-  pack_data <- pack_data[["results"]]
-  return(unique(pack_data[,1]))
+get_installed_packages_with_data <- function(with_data = TRUE) {
+  all_installed_packages <- .packages(all.available = TRUE)
+  if (with_data) all_installed_packages <- unique(data(package = all_installed_packages)[["results"]][,1]) 
+  return(all_installed_packages)
 }
 
 drop_unused_levels <- function(dat, columns) {
@@ -1162,10 +1205,10 @@ hashed_id <- function(x, salt, algo = "crc32") {
 #   Reduce(function(x,y) {y = dplyr::if_else(y == 0, 0, x + 1)}, z[-1], 
 #          init = dplyr::if_else(z[1] == 0, 0, NA_real_), accumulate = TRUE)
 # }
-.spells <- function(x) {
+.spells <- function(x, initial_value = NA_real_) {
   y <- mat.or.vec(length(x), 1)
   if(length(x) > 0) {
-    y[1] <- dplyr::if_else(x[1] == 0, 0, NA_real_)
+    y[1] <- dplyr::if_else(x[1] == 0, 0, initial_value + 1)
     if(length(x) > 1) {
       for(i in 2:length(x)) {
         y[i] <- dplyr::if_else(x[i] == 0, 0, y[i-1] + 1)
@@ -1173,4 +1216,63 @@ hashed_id <- function(x, salt, algo = "crc32") {
     }
   }
   return(y)
+}
+
+convert_to_dec_deg <- function (dd, mm = 0 , ss = 0, dir) {
+  if(missing(dd))  stop("dd must be supplied")
+  if(!missing(dir)) {
+    dir <- toupper(dir)
+    if(!all(na.omit(dir) %in% c("E", "W", "N", "S"))) stop("dir must only contain direction letters E, W, N or S")
+    if(any(na.omit(dd) < 0)) stop("dd must be positive if dir is supplied") 
+  }
+  if(!all(mm >= 0 & mm <= 60, na.rm = TRUE)) stop("mm must be between 0 and 60")
+  if(!all(ss >= 0 & ss <= 60, na.rm = TRUE)) stop("ss must be between 0 and 60")
+  sgn <- ifelse(is.na(dir), NA, ifelse(dir %in% c("S", "W"), -1, 1))
+  decdeg <- (dd + ((mm * 60) + ss)/3600) * sgn
+  return(decdeg)
+}
+
+create_av_packs <- function() {
+  av_packs <<- available.packages(repos = "https://cran.rstudio.com/")
+  av_packs <<- data.frame(av_packs)
+}
+
+package_check <- function(package) {
+  out <- c()
+  if(!exists("av_packs")) {
+    create_av_packs()
+  }
+  if(package %in% rownames(installed.packages())) {
+    out[[1]] <- "1"
+    v_machine <- as.character(packageVersion(package))
+    v_web <- as.character(av_packs[av_packs$Package == package, "Version"])
+    out[[2]] <- compareVersion(v_machine, v_web)
+    out[[3]] <- v_machine
+    out[[4]] <- v_web
+    return(out)
+  }
+  else {
+    #check if the package name is typed right
+    if(package %in% av_packs$Package) {
+      out[[1]] <- "2"
+      return(out)
+    }
+    else {
+      #wrong  spelling check you spelling
+      out[[1]] <- "0"
+      return(out)
+    }
+  }
+}
+              
+in_top_n <- function(x, n = 10, wt, fun = sum) {
+  dat <- data.frame(x = x)
+  if(!missing(wt)) {
+    dat$wt <- wt
+    dat <- dat %>% 
+      group_by(x) %>%
+      summarise(fq = as.function(fun)(na.omit(wt))) %>% arrange(-fq)
+  }
+  else dat <- dat %>% count(x, sort = TRUE, name = "fq")
+  return(x %in% dat$x[1:n])
 }
