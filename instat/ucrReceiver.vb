@@ -41,7 +41,6 @@ Public Class ucrReceiver
     'Should the receiver attempt to autofill items based on lstIncludedAutoFillProperties?
     Public bAutoFill As Boolean = False
     Public lstIncludedAutoFillProperties As Dictionary(Of String, String())
-    Public lstOfIncludedAutoFillProperties As List(Of String)
 
     Public bAddParameterIfEmpty As Boolean = False
     'If the control is used to set a parameter that is a string i.e. column = "ID"
@@ -86,7 +85,6 @@ Public Class ucrReceiver
         lstExcludedMetadataProperties = New List(Of KeyValuePair(Of String, String()))
         bFirstLoad = True
         lstIncludedAutoFillProperties = New Dictionary(Of String, String())
-        lstOfIncludedAutoFillProperties = New List(Of String)
         bFirstShown = True
         bTypeSet = False
         strSelectorHeading = "Variables"
@@ -361,10 +359,6 @@ Public Class ucrReceiver
         lstIncludedAutoFillProperties = lstNewIncludedAutoFillProperties
     End Sub
 
-    Public Sub SetIncludedAutoFillPropertiesAsList(lstNewIncludedAutoFillProperties As List(Of String))
-        lstOfIncludedAutoFillProperties = lstNewIncludedAutoFillProperties
-    End Sub
-
     Protected Overridable Sub Selector_ResetAll() Handles ucrSelector.ResetReceivers
         Clear()
     End Sub
@@ -530,8 +524,10 @@ Public Class ucrReceiver
         SetIncludedAutoFillProperties(dctTemp)
     End Sub
 
-    Public Sub SetClimaticType(lstStrTemp As List(Of String))
-        SetIncludedAutoFillPropertiesAsList(lstStrTemp)
+    Public Sub SetClimaticType(lstStrTemp As String())
+        Dim dctTemp As New Dictionary(Of String, String())
+        dctTemp.Add("Climatic_Type", lstStrTemp)
+        SetIncludedAutoFillProperties(dctTemp)
     End Sub
 
     Public Sub SetOptionsByContextType(strSingleType As String, Optional strQuotes As String = Chr(34))
@@ -624,33 +620,32 @@ Public Class ucrReceiver
                 If Selector.lstAvailableVariable.Items.Count = 1 Then
                     Add(Selector.lstAvailableVariable.Items(0).Text, Selector.strCurrentDataFrame)
                 End If
-                Exit Sub
-            ElseIf ((bTypeSet AndAlso GetItemType() = "column") OrElse Selector.GetItemType() = "column") Then
+            ElseIf lstIncludedAutoFillProperties.Count > 0 AndAlso ((bTypeSet AndAlso GetItemType() = "column") OrElse Selector.GetItemType() = "column") Then
                 SetMeAsReceiver()
                 clsGetItems.SetRCommand(frmMain.clsRLink.strInstatDataObject & "$get_column_names")
                 clsIncludeList.SetRCommand("list")
-                If lstIncludedAutoFillProperties.Count > 0 Then
-                    For Each kvpInclude In lstIncludedAutoFillProperties
+                For Each kvpInclude In lstIncludedAutoFillProperties
+                    If kvpInclude.Value.ToList().Count = 1 Then
                         clsIncludeList.AddParameter(kvpInclude.Key, GetListAsRString(kvpInclude.Value.ToList(), bWithQuotes:=False))
-                    Next
-                ElseIf lstOfIncludedAutoFillProperties.Count > 0 Then
-                    clsIncludeList.AddParameter("Climatic_Type", GetListAsRString(lstOfIncludedAutoFillProperties, bWithQuotes = False))
-                End If
-                clsGetItems.AddParameter("include", clsRFunctionParameter:=clsIncludeList)
-                    clsGetItems.AddParameter("data_name", Chr(34) & Selector.strCurrentDataFrame & Chr(34))
-                    expItems = frmMain.clsRLink.RunInternalScriptGetValue(clsGetItems.ToScript(), bSilent:=True)
-                    If expItems IsNot Nothing AndAlso Not expItems.Type = Internals.SymbolicExpressionType.Null Then
-                        chrColumns = expItems.AsCharacter
-                        If chrColumns.Count = 1 Then
-                            For Each lviTempVariable As ListViewItem In Selector.lstAvailableVariable.Items
-                                If lviTempVariable.Text = chrColumns(0) Then
-                                    Add(lviTempVariable.Text, Selector.strCurrentDataFrame)
-                                    Exit For
-                                End If
-                            Next
-                        End If
+                    Else
+                        clsIncludeList.AddParameter(kvpInclude.Key, GetListAsRString(kvpInclude.Value.ToList()))
                     End If
+                Next
+                clsGetItems.AddParameter("include", clsRFunctionParameter:=clsIncludeList)
+                clsGetItems.AddParameter("data_name", Chr(34) & Selector.strCurrentDataFrame & Chr(34))
+                expItems = frmMain.clsRLink.RunInternalScriptGetValue(clsGetItems.ToScript(), bSilent:=True)
+                If expItems IsNot Nothing AndAlso Not expItems.Type = Internals.SymbolicExpressionType.Null Then
+                    chrColumns = expItems.AsCharacter
+                    For Each lviTempVariable As ListViewItem In Selector.lstAvailableVariable.Items
+                        For i = 0 To chrColumns.Count - 1
+                            If lviTempVariable.Text = chrColumns(i) Then
+                                Add(lviTempVariable.Text, Selector.strCurrentDataFrame)
+                                Exit For
+                            End If
+                        Next
+                    Next
                 End If
             End If
+        End If
     End Sub
 End Class
