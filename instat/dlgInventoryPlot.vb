@@ -34,8 +34,6 @@ Public Class dlgInventoryPlot
     End Sub
 
     Private Sub InitialiseDialog()
-        Dim lstClimaticType As New List(Of String)
-
         ucrBase.clsRsyntax.bExcludeAssignedFunctionOutput = False
         ucrBase.iHelpTopicID = 359
         ucrBase.clsRsyntax.iCallType = 3
@@ -55,8 +53,7 @@ Public Class dlgInventoryPlot
         ucrReceiverElements.SetParameterIsString()
         ucrReceiverElements.strSelectorHeading = "Numerics"
         ucrReceiverElements.SetIncludedDataTypes({"numeric"})
-        lstClimaticType.AddRange({"rain", "temp_max", "temp_max"})
-        ucrReceiverElements.SetClimaticType(lstClimaticType)
+        ucrReceiverElements.SetClimaticType({"rain", "temp_min", "temp_max", "sunshine_hours", "cloud_cover", "wind_speed", "wind_direction", "radiation"})
         ucrReceiverElements.bAutoFill = True
         ucrReceiverElements.bWithQuotes = False
 
