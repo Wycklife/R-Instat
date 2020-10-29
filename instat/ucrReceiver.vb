@@ -528,6 +528,12 @@ Public Class ucrReceiver
         SetIncludedAutoFillProperties(dctTemp)
     End Sub
 
+    Public Sub SetClimaticType(lstStrTemp As String())
+        Dim dctTemp As New Dictionary(Of String, String())
+        dctTemp.Add("Climatic_Type", lstStrTemp)
+        SetIncludedAutoFillProperties(dctTemp)
+    End Sub
+
     Public Sub SetOptionsByContextType(strSingleType As String, Optional strQuotes As String = Chr(34))
         AddIncludedMetadataProperty("O_by_C_Type", {strQuotes & strSingleType & strQuotes})
     End Sub
@@ -634,21 +640,25 @@ Public Class ucrReceiver
                 clsGetItems.SetRCommand(frmMain.clsRLink.strInstatDataObject & "$get_column_names")
                 clsIncludeList.SetRCommand("list")
                 For Each kvpInclude In lstIncludedAutoFillProperties
-                    clsIncludeList.AddParameter(kvpInclude.Key, GetListAsRString(kvpInclude.Value.ToList(), bWithQuotes:=False))
+                    If kvpInclude.Value.ToList().Count = 1 Then
+                        clsIncludeList.AddParameter(kvpInclude.Key, GetListAsRString(kvpInclude.Value.ToList(), bWithQuotes:=False))
+                    Else
+                        clsIncludeList.AddParameter(kvpInclude.Key, GetListAsRString(kvpInclude.Value.ToList()))
+                    End If
                 Next
                 clsGetItems.AddParameter("include", clsRFunctionParameter:=clsIncludeList)
                 clsGetItems.AddParameter("data_name", Chr(34) & Selector.strCurrentDataFrame & Chr(34))
                 expItems = frmMain.clsRLink.RunInternalScriptGetValue(clsGetItems.ToScript(), bSilent:=True)
                 If expItems IsNot Nothing AndAlso Not expItems.Type = Internals.SymbolicExpressionType.Null Then
                     chrColumns = expItems.AsCharacter
-                    If chrColumns.Count = 1 Then
-                        For Each lviTempVariable As ListViewItem In Selector.lstAvailableVariable.Items
-                            If lviTempVariable.Text = chrColumns(0) Then
+                    For Each lviTempVariable As ListViewItem In Selector.lstAvailableVariable.Items
+                        For i = 0 To chrColumns.Count - 1
+                            If lviTempVariable.Text = chrColumns(i) Then
                                 Add(lviTempVariable.Text, Selector.strCurrentDataFrame)
                                 Exit For
                             End If
                         Next
-                    End If
+                    Next
                 End If
             End If
         End If
