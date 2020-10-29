@@ -528,9 +528,13 @@ Public Class ucrReceiver
         SetIncludedAutoFillProperties(dctTemp)
     End Sub
 
-    Public Sub SetClimaticType(lstStrTemp As String())
+    Public Sub SetClimaticType(enumerableStrTemp As IEnumerable(Of String))
         Dim dctTemp As New Dictionary(Of String, String())
-        dctTemp.Add("Climatic_Type", lstStrTemp)
+        Dim arrStrTemp() As String = enumerableStrTemp.ToArray
+        For i As Integer = 0 To arrStrTemp.Count - 1
+            arrStrTemp(i) = Chr(34) & arrStrTemp(i) & Chr(34)
+        Next
+        dctTemp.Add("Climatic_Type", arrStrTemp)
         SetIncludedAutoFillProperties(dctTemp)
     End Sub
 
@@ -640,11 +644,7 @@ Public Class ucrReceiver
                 clsGetItems.SetRCommand(frmMain.clsRLink.strInstatDataObject & "$get_column_names")
                 clsIncludeList.SetRCommand("list")
                 For Each kvpInclude In lstIncludedAutoFillProperties
-                    If kvpInclude.Value.ToList().Count = 1 Then
-                        clsIncludeList.AddParameter(kvpInclude.Key, GetListAsRString(kvpInclude.Value.ToList(), bWithQuotes:=False))
-                    Else
-                        clsIncludeList.AddParameter(kvpInclude.Key, GetListAsRString(kvpInclude.Value.ToList()))
-                    End If
+                    clsIncludeList.AddParameter(kvpInclude.Key, GetListAsRString(kvpInclude.Value.ToList(), bWithQuotes:=False))
                 Next
                 clsGetItems.AddParameter("include", clsRFunctionParameter:=clsIncludeList)
                 clsGetItems.AddParameter("data_name", Chr(34) & Selector.strCurrentDataFrame & Chr(34))
