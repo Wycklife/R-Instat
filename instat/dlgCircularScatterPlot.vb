@@ -17,9 +17,10 @@
 Imports instat.Translations
 
 Public Class dlgCircularScatterPlot
-    Public bfirstload As Boolean = True
-    Public bReset As Boolean = True
-    Public clsCircularPointFunction As New RFunction
+    Private bfirstload As Boolean = True
+    Private bReset As Boolean = True
+    Private clsCircularPointFunction As New RFunction
+    Private clsRsyntax As RSyntax
     Private Sub dlgCircularScatterPlot_Load(sender As Object, e As EventArgs) Handles MyBase.Load
         autoTranslate(Me)
         If bfirstload Then
@@ -36,11 +37,23 @@ Public Class dlgCircularScatterPlot
 
     Private Sub InitialiseDialog()
 
+        ucrBase.clsRsyntax.bExcludeAssignedFunctionOutput = False
+        ucrBase.clsRsyntax.iCallType = 3
+
         ucrSelectorCircularDataFrame.SetParameter(New RParameter("data", 0))
         ucrSelectorCircularDataFrame.SetParameterIsrfunction()
 
         ucrReceiverCircularVariable.SetParameter(New RParameter("x", 0))
         ucrReceiverCircularVariable.Selector = ucrSelectorCircularDataFrame
+        ucrReceiverCircularVariable.SetParameterIsRFunction()
+        ucrReceiverCircularVariable.bWithQuotes = False
+
+        ucrSaveCircularPlot.SetPrefix("circular_scatter_plot")
+        ucrSaveCircularPlot.SetDataFrameSelector(ucrSelectorCircularDataFrame.ucrAvailableDataFrames)
+        ucrSaveCircularPlot.SetIsComboBox()
+        ucrSaveCircularPlot.SetCheckBoxText("Save Graph")
+        ucrSaveCircularPlot.SetSaveTypeAsGraph()
+        ucrSaveCircularPlot.SetAssignToIfUncheckedValue("last_graph")
 
     End Sub
 
@@ -51,13 +64,31 @@ Public Class dlgCircularScatterPlot
         ucrReceiverCircularVariable.SetMeAsReceiver()
         ucrSaveCircularPlot.Reset()
 
+        clsCircularPointFunction.SetPackageName("circular")
+        clsCircularPointFunction.SetRCommand("points.circular")
+
+        ucrBase.clsRsyntax.SetBaseRFunction(clsCircularPointFunction)
     End Sub
 
     Public Sub SetRCodeForControls(bReset As Boolean)
-
+        ucrReceiverCircularVariable.SetRCode(clsCircularPointFunction, bReset)
     End Sub
 
     Private Sub TestOKEnabled()
+        If ucrSaveCircularPlot.IsComplete AndAlso Not ucrReceiverCircularVariable.IsEmpty Then
+            ucrBase.OKEnabled(True)
+        Else
+            ucrBase.OKEnabled(False)
+        End If
+    End Sub
 
+    Private Sub CoreControls_ControlContentsChanged() Handles ucrReceiverCircularVariable.ControlContentsChanged, ucrSaveCircularPlot.ControlContentsChanged
+        TestOKEnabled()
+    End Sub
+
+    Private Sub ucrBase_ClickReset(sender As Object, e As EventArgs) Handles ucrBase.ClickReset
+        SetDefaults()
+        SetRCodeForControls(True)
+        TestOKEnabled()
     End Sub
 End Class
